@@ -34,19 +34,37 @@ def parse_neighbors(filepath):
             neighbors[p_id] = n_ids
     return neighbors
 
+import glob
+import os
+
 def main():
-    if len(sys.argv) == 4:
+    if len(sys.argv) == 3:
         ts = sys.argv[1]
         target_id = int(sys.argv[2])
-        rc = float(sys.argv[3])
     else:
         ts = input("Ingrese el timestamp: ")
         target_id = int(input("Ingrese el ID de la particula foco: "))
-        rc = float(input("Ingrese el radio de corte (r_c) utilizado: "))
+
+    # Buscar el archivo de output que contiene el rc en el nombre
+    output_pattern = f'data/{ts}-rc-*-output.txt'
+    matched_files = glob.glob(output_pattern)
+
+    if not matched_files:
+        print(f"Error: No se encontro el archivo de vecinos para el timestamp {ts}.")
+        sys.exit(1)
+
+    output_filepath = matched_files[0]
+
+    # Extraer el valor de rc limpiando el nombre del archivo
+    filename = os.path.basename(output_filepath)
+    rc_str = filename.split('-rc-')[1].replace('-output.txt', '')
+    rc = float(rc_str)
+
+    print(f"-> Radio de corte (rc) detectado automaticamente: {rc}")
 
     n, l, radii = parse_static(f'data/{ts}.txt')
     positions = parse_dynamic(f'data/{ts}-Dynamic.txt', n)
-    neighbors = parse_neighbors(f'data/{ts}-output.txt')
+    neighbors = parse_neighbors(output_filepath)
 
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -55,7 +73,6 @@ def main():
     ax.set_aspect('equal')
 
     target_neighbors = neighbors.get(target_id, [])
-
     target_x, target_y, target_r = 0, 0, 0
 
     for i in range(n):
@@ -67,7 +84,6 @@ def main():
             color = 'green'
             zorder = 3
             target_x, target_y, target_r = x, y, r
-            # Imprime texto para la particula foco
             ax.text(x, y, str(p_id), fontsize=9, ha='center', va='center', zorder=4, color='white', fontweight='bold')
         elif p_id in target_neighbors:
             color = 'blue'
@@ -82,7 +98,7 @@ def main():
 
     if target_r > 0:
         interaction_radius = target_r + rc
-        rc_circle = patches.Circle((target_x, target_y), radius=interaction_radius, fill=False, edgecolor='red', linestyle='--', linewidth=1.5, zorder=5, label=f'Área interacción (rc={rc})')
+        rc_circle = patches.Circle((target_x, target_y), radius=interaction_radius, fill=False, edgecolor='red', linestyle='--', linewidth=1.5, zorder=5, label=f'Área de interacción (rc={rc})')
         ax.add_patch(rc_circle)
         ax.legend(loc='upper right')
 

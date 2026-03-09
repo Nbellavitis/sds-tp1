@@ -67,7 +67,7 @@ public class Simulation {
             System.out.println(((endTime - startTime) / 1000000.0));
         } else {
             System.out.println("Tiempo de ejecucion: " + ((endTime - startTime) / 1000000.0) + " ms");
-            saveOutputs(N, L, particles, neighbors);
+            saveOutputs(N, L, rc, particles, neighbors);
         }
     }
 
@@ -99,12 +99,12 @@ public class Simulation {
         return particles;
     }
 
-    private static void saveOutputs(int N, double L, List<Particle> particles, Map<Integer, Set<Integer>> neighbors) {
+    private static void saveOutputs(int N, double L, double rc, List<Particle> particles, Map<Integer, Set<Integer>> neighbors) {
         long ts = System.currentTimeMillis() / 1000;
         new File("data").mkdirs();
 
         try {
-            PrintWriter staticWriter = new PrintWriter(new FileWriter("data/" + ts + ".txt"));
+            PrintWriter staticWriter = new PrintWriter(new FileWriter("data/" + ts +  ".txt"));
             staticWriter.println(N);
             staticWriter.println(L);
             for (Particle p : particles) {
@@ -119,7 +119,7 @@ public class Simulation {
             }
             dynamicWriter.close();
 
-            PrintWriter outWriter = new PrintWriter(new FileWriter("data/" + ts + "-output.txt"));
+            PrintWriter outWriter = new PrintWriter(new FileWriter("data/" + ts + "-rc-" + rc  + "-output.txt"));
             for (Map.Entry<Integer, Set<Integer>> entry : neighbors.entrySet()) {
                 outWriter.print("[" + entry.getKey());
                 List<Integer> sortedNeighbors = new ArrayList<>(entry.getValue());
