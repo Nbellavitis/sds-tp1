@@ -11,6 +11,7 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
+
 public class Simulation {
     public static void main(String[] args) {
         int N = 0;
@@ -65,6 +66,7 @@ public class Simulation {
         if (args.length >= 7) {
             System.out.println(((endTime - startTime) / 1000000.0));
         } else {
+            System.out.println("Tiempo de ejecucion: " + ((endTime - startTime) / 1000000.0) + " ms");
             saveOutputs(N, L, particles, neighbors);
         }
     }

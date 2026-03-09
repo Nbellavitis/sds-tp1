@@ -1,4 +1,3 @@
-import matplotlib.subplots as plt
 import matplotlib.patches as patches
 import sys
 
@@ -36,7 +35,6 @@ def parse_neighbors(filepath):
     return neighbors
 
 def main():
-    # Si le pasas los parametros al ejecutar, los agarra directo. Si no, te los pide.
     if len(sys.argv) == 4:
         ts = sys.argv[1]
         target_id = int(sys.argv[2])
