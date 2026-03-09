@@ -1,9 +1,6 @@
 package ar.edu.itba.sds;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -11,63 +8,76 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
-
 public class Simulation {
+
     public static void main(String[] args) {
-        int N = 0;
+        List<Particle> particles = null;
         double L = 0;
         double rc = 0;
-        double r = 0;
         int M = 0;
         boolean periodic = false;
         String method = "CIM";
+        String baseFilename = String.valueOf(System.currentTimeMillis() / 1000);
 
-        if (args.length >= 7) {
-            N = Integer.parseInt(args[0]);
-            L = Double.parseDouble(args[1]);
-            rc = Double.parseDouble(args[2]);
-            r = Double.parseDouble(args[3]);
-            M = Integer.parseInt(args[4]);
-            periodic = Integer.parseInt(args[5]) == 1;
-            method = args[6];
-        } else {
-            Scanner scanner = new Scanner(System.in);
-            System.out.print("N: ");
-            N = scanner.nextInt();
-            System.out.print("L: ");
-            L = scanner.nextDouble();
-            System.out.print("r_c: ");
-            rc = scanner.nextDouble();
-            System.out.print("r: ");
-            r = scanner.nextDouble();
-            System.out.print("M: ");
-            M = scanner.nextInt();
-            System.out.print("periodic (1 para activar, 0 para desactivar): ");
-            periodic = scanner.nextInt() == 1;
-            scanner.close();
-        }
+        try {
+            if (args.length == 5) {
+                String staticFile = args[0];
+                String dynamicFile = args[1];
+                rc = Double.parseDouble(args[2]);
+                M = Integer.parseInt(args[3]);
+                periodic = Integer.parseInt(args[4]) == 1;
 
-        List<Particle> particles = generateParticles(N, L, r);
+                double[] lArr = new double[1];
+                particles = loadParticles(staticFile, dynamicFile, lArr);
+                L = lArr[0];
+                baseFilename = new File(staticFile).getName().replace(".txt", "");
+            } else {
+                int N = 0;
+                double r = 0;
 
-        long startTime = System.nanoTime();
-        Map<Integer, Set<Integer>> neighbors;
+                if (args.length == 6) {
+                    N = Integer.parseInt(args[0]);
+                    L = Double.parseDouble(args[1]);
+                    rc = Double.parseDouble(args[2]);
+                    r = Double.parseDouble(args[3]);
+                    M = Integer.parseInt(args[4]);
+                    periodic = Integer.parseInt(args[5]) == 1;
+                } else {
+                    Scanner scanner = new Scanner(System.in);
+                    System.out.print("N: "); N = scanner.nextInt();
+                    System.out.print("L: "); L = scanner.nextDouble();
+                    System.out.print("r_c: "); rc = scanner.nextDouble();
+                    System.out.print("r: "); r = scanner.nextDouble();
+                    System.out.print("M: "); M = scanner.nextInt();
+                    System.out.print("periodic (1=si, 0=no): "); periodic = scanner.nextInt() == 1;
+                    scanner.close();
+                }
 
-        if (method.equals("BF")) {
-            BruteForce bf = new BruteForce(L, rc, periodic);
-            neighbors = bf.calculateNeighbors(particles);
-        } else {
+                particles = generateParticles(N, L, r);
+                saveMapFiles(N, L, particles, baseFilename);
+            }
+
+            long startTime = System.nanoTime();
+            Map<Integer, Set<Integer>> neighbors;
+
+
             CellIndexMethod cim = new CellIndexMethod(L, M, rc, periodic);
             cim.populateGrid(particles);
             neighbors = cim.calculateNeighbors();
-        }
 
-        long endTime = System.nanoTime();
 
-        if (args.length >= 7) {
-            System.out.println(((endTime - startTime) / 1000000.0));
-        } else {
-            System.out.println("Tiempo de ejecucion: " + ((endTime - startTime) / 1000000.0) + " ms");
-            saveOutputs(N, L, rc, particles, neighbors);
+            long endTime = System.nanoTime();
+            double timeMs = (endTime - startTime) / 1000000.0;
+
+
+            System.out.println("Tiempo de ejecucion: " + timeMs + " ms");
+            System.out.println("Archivos generados con timestamp: " + baseFilename);
+
+
+            saveOutputs(rc, neighbors, baseFilename);
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
     }
 
@@ -99,12 +109,40 @@ public class Simulation {
         return particles;
     }
 
-    private static void saveOutputs(int N, double L, double rc, List<Particle> particles, Map<Integer, Set<Integer>> neighbors) {
-        long ts = System.currentTimeMillis() / 1000;
-        new File("data").mkdirs();
+    private static List<Particle> loadParticles(String staticPath, String dynamicPath, double[] L_out) throws FileNotFoundException {
+        List<Particle> particles = new ArrayList<>();
+        Scanner staticScanner = new Scanner(new File(staticPath));
+        Scanner dynamicScanner = new Scanner(new File(dynamicPath));
 
+        int N = staticScanner.nextInt();
+        L_out[0] = staticScanner.nextDouble();
+
+        List<Double> radii = new ArrayList<>();
+        List<Double> properties = new ArrayList<>();
+        for (int i = 0; i < N; i++) {
+            radii.add(staticScanner.nextDouble());
+            properties.add(staticScanner.nextDouble());
+        }
+
+        dynamicScanner.nextDouble();
+
+        for (int i = 0; i < N; i++) {
+            double x = dynamicScanner.nextDouble();
+            double y = dynamicScanner.nextDouble();
+            double vx = dynamicScanner.nextDouble();
+            double vy = dynamicScanner.nextDouble();
+            particles.add(new Particle(i + 1, radii.get(i), properties.get(i), x, y, vx, vy));
+        }
+
+        staticScanner.close();
+        dynamicScanner.close();
+        return particles;
+    }
+
+    private static void saveMapFiles(int N, double L, List<Particle> particles, String baseFilename) {
+        new File("data").mkdirs();
         try {
-            PrintWriter staticWriter = new PrintWriter(new FileWriter("data/" + ts +  ".txt"));
+            PrintWriter staticWriter = new PrintWriter(new FileWriter("data/" + baseFilename + ".txt"));
             staticWriter.println(N);
             staticWriter.println(L);
             for (Particle p : particles) {
@@ -112,14 +150,20 @@ public class Simulation {
             }
             staticWriter.close();
 
-            PrintWriter dynamicWriter = new PrintWriter(new FileWriter("data/" + ts + "-Dynamic.txt"));
+            PrintWriter dynamicWriter = new PrintWriter(new FileWriter("data/" + baseFilename + "-Dynamic.txt"));
             dynamicWriter.println("0");
             for (Particle p : particles) {
                 dynamicWriter.println(p.getX() + " " + p.getY() + " 0.0 0.0");
             }
             dynamicWriter.close();
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
 
-            PrintWriter outWriter = new PrintWriter(new FileWriter("data/" + ts + "-rc-" + rc  + "-output.txt"));
+    private static void saveOutputs(double rc, Map<Integer, Set<Integer>> neighbors, String baseFilename) {
+        try {
+            PrintWriter outWriter = new PrintWriter(new FileWriter("data/" + baseFilename + "-rc-" + rc + "-output.txt"));
             for (Map.Entry<Integer, Set<Integer>> entry : neighbors.entrySet()) {
                 outWriter.print("[" + entry.getKey());
                 List<Integer> sortedNeighbors = new ArrayList<>(entry.getValue());
@@ -130,11 +174,8 @@ public class Simulation {
                 outWriter.println("]");
             }
             outWriter.close();
-
-            System.out.println("\nSimulacion finalizada. Archivos generados con timestamp: " + ts);
-
         } catch (IOException e) {
-            System.out.println("Error al guardar los archivos: " + e.getMessage());
+            System.out.println(e.getMessage());
         }
     }
 }
