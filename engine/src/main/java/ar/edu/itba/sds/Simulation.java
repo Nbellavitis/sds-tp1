@@ -43,6 +43,20 @@ public class Simulation {
                 saveMapFiles(N, L, particles, baseFilename);
             }
 
+            double maxR = 0;
+            for (Particle p : particles) {
+                if (p.getRadius() > maxR) maxR = p.getRadius();
+            }
+
+            if (M <= 0) {
+                throw new IllegalArgumentException("M debe ser mayor a 0.");
+            }
+            
+            if (L / M <= rc + 2 * maxR) {
+                int maxM = (int) (L / (rc + 2 * maxR));
+                throw new IllegalArgumentException("La condicion L/M > rc + 2r (o equivalentemente M < L / (rc + 2r)) no se cumple. Para los parametros dados, el valor de M debe ser a lo sumo " + maxM + ".");
+            }
+
             long startTime = System.nanoTime();
             Map<Integer, Set<Integer>> neighbors;
 
