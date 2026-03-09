@@ -26,3 +26,5 @@ replay_pid*
 /data
 engine/target
 venv
+.venv
+.vscode
