@@ -45,7 +45,6 @@ def main():
         ts = input("Ingrese el timestamp: ")
         target_id = int(input("Ingrese el ID de la particula foco: "))
 
-    # Buscar el archivo de output que contiene el rc en el nombre
     output_pattern = f'data/{ts}-rc-*-output.txt'
     matched_files = glob.glob(output_pattern)
 
@@ -55,12 +54,13 @@ def main():
 
     output_filepath = matched_files[0]
 
-    # Extraer el valor de rc limpiando el nombre del archivo
     filename = os.path.basename(output_filepath)
-    rc_str = filename.split('-rc-')[1].replace('-output.txt', '')
+    periodic = '-periodic-' in filename or filename.endswith('-periodic-output.txt')
+    rc_str = filename.split('-rc-')[1].replace('-periodic-output.txt', '').replace('-output.txt', '')
     rc = float(rc_str)
 
     print(f"-> Radio de corte (rc) detectado automaticamente: {rc}")
+    print(f"-> Condiciones periodicas: {'Si' if periodic else 'No'}")
 
     n, l, radii = parse_static(f'data/{ts}.txt')
     positions = parse_dynamic(f'data/{ts}-Dynamic.txt', n)
@@ -98,11 +98,34 @@ def main():
 
     if target_r > 0:
         interaction_radius = target_r + rc
-        rc_circle = patches.Circle((target_x, target_y), radius=interaction_radius, fill=False, edgecolor='red', linestyle='--', linewidth=1.5, zorder=5, label=f'Área de interacción (rc={rc})')
-        ax.add_patch(rc_circle)
-        ax.legend(loc='upper right')
+        if periodic:
+            offsets = [0, -l, l]
+            first = True
+            for dx in offsets:
+                for dy in offsets:
+                    cx, cy = target_x + dx, target_y + dy
+                    if (cx + interaction_radius >= 0 and cx - interaction_radius <= l and
+                            cy + interaction_radius >= 0 and cy - interaction_radius <= l):
+                        label = f'Área de interacción (rc={rc}, periódico)' if first else None
+                        rc_circle = patches.Circle((cx, cy), radius=interaction_radius, fill=False,
+                                                   edgecolor='red', linestyle='--', linewidth=1.5,
+                                                   zorder=5, label=label)
+                        ax.add_patch(rc_circle)
+                        first = False
+            ax.legend(loc='upper right')
+        else:
+            rc_circle = patches.Circle((target_x, target_y), radius=interaction_radius, fill=False, edgecolor='red', linestyle='--', linewidth=1.5, zorder=5, label=f'Área de interacción (rc={rc})')
+            ax.add_patch(rc_circle)
+            ax.legend(loc='upper right')
 
-    plt.title(f"Sistema de Particulas (Timestamp: {ts}) - Foco: {target_id} - N: {n}")
+    clip_rect = patches.Rectangle((0, 0), l, l, transform=ax.transData, fill=False, visible=False)
+    ax.add_patch(clip_rect)
+    for p in ax.patches:
+        if p is not clip_rect:
+            p.set_clip_path(clip_rect)
+
+    plt.title(f"Sistema de Particulas (Timestamp: {ts}) - Foco: {target_id} - N: {n}" +
+              (" [Periódico]" if periodic else ""))
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.grid(True, linestyle=':', alpha=0.6)
