@@ -1,12 +1,7 @@
 package ar.edu.itba.sds;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 
 public class Simulation {
 
@@ -20,29 +15,21 @@ public class Simulation {
         String baseFilename = String.valueOf(System.currentTimeMillis() / 1000);
 
         try {
-            if (args.length == 5) {
+            if (args.length == 2) {
+                System.out.println("entre");
                 String staticFile = args[0];
                 String dynamicFile = args[1];
-                rc = Double.parseDouble(args[2]);
-                M = Integer.parseInt(args[3]);
-                periodic = Integer.parseInt(args[4]) == 1;
-
                 double[] lArr = new double[1];
+                Scanner scanner = new Scanner(System.in);
+                System.out.print("M: "); M = scanner.nextInt();
+                System.out.print("rc: "); rc = scanner.nextDouble();
                 particles = loadParticles(staticFile, dynamicFile, lArr);
                 L = lArr[0];
                 baseFilename = new File(staticFile).getName().replace(".txt", "");
+
             } else {
                 int N = 0;
                 double r = 0;
-
-                if (args.length == 6) {
-                    N = Integer.parseInt(args[0]);
-                    L = Double.parseDouble(args[1]);
-                    rc = Double.parseDouble(args[2]);
-                    r = Double.parseDouble(args[3]);
-                    M = Integer.parseInt(args[4]);
-                    periodic = Integer.parseInt(args[5]) == 1;
-                } else {
                     Scanner scanner = new Scanner(System.in);
                     System.out.print("N: "); N = scanner.nextInt();
                     System.out.print("L: "); L = scanner.nextDouble();
@@ -51,7 +38,6 @@ public class Simulation {
                     System.out.print("M: "); M = scanner.nextInt();
                     System.out.print("periodic (1=si, 0=no): "); periodic = scanner.nextInt() == 1;
                     scanner.close();
-                }
 
                 particles = generateParticles(N, L, r);
                 saveMapFiles(N, L, particles, baseFilename);
@@ -77,7 +63,7 @@ public class Simulation {
             saveOutputs(rc, neighbors, baseFilename);
 
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -109,28 +95,58 @@ public class Simulation {
         return particles;
     }
 
-    private static List<Particle> loadParticles(String staticPath, String dynamicPath, double[] L_out) throws FileNotFoundException {
+    private static List<Particle> loadParticles(String staticPath, String dynamicPath, double[] L_out) throws Exception {
         List<Particle> particles = new ArrayList<>();
-        Scanner staticScanner = new Scanner(new File(staticPath));
-        Scanner dynamicScanner = new Scanner(new File(dynamicPath));
+        Scanner staticScanner = new Scanner(new File(staticPath)).useLocale(java.util.Locale.US);
+        Scanner dynamicScanner = new Scanner(new File(dynamicPath)).useLocale(java.util.Locale.US);
 
         int N = staticScanner.nextInt();
         L_out[0] = staticScanner.nextDouble();
+        if (staticScanner.hasNextLine()) {
+            staticScanner.nextLine();
+        }
 
         List<Double> radii = new ArrayList<>();
         List<Double> properties = new ArrayList<>();
+
         for (int i = 0; i < N; i++) {
-            radii.add(staticScanner.nextDouble());
-            properties.add(staticScanner.nextDouble());
+            String line = staticScanner.nextLine().trim();
+            while (line.isEmpty() && staticScanner.hasNextLine()) {
+                line = staticScanner.nextLine().trim();
+            }
+
+            String[] parts = line.split("\\s+");
+            radii.add(Double.parseDouble(parts[0]));
+            if (parts.length > 1) {
+                properties.add(Double.parseDouble(parts[1]));
+            } else {
+                properties.add(1.0);
+            }
         }
 
         dynamicScanner.nextDouble();
 
+        if (dynamicScanner.hasNextLine()) {
+            dynamicScanner.nextLine();
+        }
+
         for (int i = 0; i < N; i++) {
-            double x = dynamicScanner.nextDouble();
-            double y = dynamicScanner.nextDouble();
-            double vx = dynamicScanner.nextDouble();
-            double vy = dynamicScanner.nextDouble();
+            String line = dynamicScanner.nextLine().trim();
+            while (line.isEmpty() && dynamicScanner.hasNextLine()) {
+                line = dynamicScanner.nextLine().trim();
+            }
+
+            String[] parts = line.split("\\s+");
+            double x = Double.parseDouble(parts[0]);
+            double y = Double.parseDouble(parts[1]);
+            double vx = 0.0;
+            double vy = 0.0;
+
+            if (parts.length >= 4) {
+                vx = Double.parseDouble(parts[2]);
+                vy = Double.parseDouble(parts[3]);
+            }
+
             particles.add(new Particle(i + 1, radii.get(i), properties.get(i), x, y, vx, vy));
         }
 
@@ -138,7 +154,6 @@ public class Simulation {
         dynamicScanner.close();
         return particles;
     }
-
     private static void saveMapFiles(int N, double L, List<Particle> particles, String baseFilename) {
         new File("data").mkdirs();
         try {
@@ -175,7 +190,7 @@ public class Simulation {
             }
             outWriter.close();
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
         }
     }
 }
