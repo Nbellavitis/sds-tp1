@@ -60,7 +60,7 @@ public class Simulation {
             System.out.println("Archivos generados con timestamp: " + baseFilename);
 
 
-            saveOutputs(rc, neighbors, baseFilename);
+            saveOutputs(rc, neighbors, baseFilename,periodic);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -176,10 +176,10 @@ public class Simulation {
         }
     }
 
-    private static void saveOutputs(double rc, Map<Integer, Set<Integer>> neighbors, String baseFilename) {
+    private static void saveOutputs(double rc, Map<Integer, Set<Integer>> neighbors, String baseFilename,boolean periodic) {
         try {
-            PrintWriter outWriter = new PrintWriter(new FileWriter("data/" + baseFilename + "-rc-" + rc + "-output.txt"));
-            for (Map.Entry<Integer, Set<Integer>> entry : neighbors.entrySet()) {
+            String periodicSuffix = periodic ? "-periodic" : "";
+            PrintWriter outWriter = new PrintWriter(new FileWriter("data/" + baseFilename + "-rc-" + rc + periodicSuffix + "-output.txt"));            for (Map.Entry<Integer, Set<Integer>> entry : neighbors.entrySet()) {
                 outWriter.print("[" + entry.getKey());
                 List<Integer> sortedNeighbors = new ArrayList<>(entry.getValue());
                 sortedNeighbors.sort(Integer::compareTo);
