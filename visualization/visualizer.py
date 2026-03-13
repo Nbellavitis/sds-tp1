@@ -48,6 +48,9 @@ def main():
     output_pattern = f'data/{ts}-rc-*-output.txt'
     matched_files = glob.glob(output_pattern)
 
+    # Filter out bruteforce files to avoid parsing issues
+    matched_files = [f for f in matched_files if '-bruteforce' not in f]
+
     if not matched_files:
         print(f"Error: No se encontro el archivo de vecinos para el timestamp {ts}.")
         sys.exit(1)

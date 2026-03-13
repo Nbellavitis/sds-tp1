@@ -21,8 +21,10 @@ public class Simulation {
                 String dynamicFile = args[1];
                 double[] lArr = new double[1];
                 Scanner scanner = new Scanner(System.in);
-                System.out.print("M: "); M = scanner.nextInt();
-                System.out.print("rc: "); rc = scanner.nextDouble();
+                System.out.print("M: ");
+                M = scanner.nextInt();
+                System.out.print("rc: ");
+                rc = scanner.nextDouble();
                 particles = loadParticles(staticFile, dynamicFile, lArr);
                 L = lArr[0];
                 baseFilename = new File(staticFile).getName().replace(".txt", "");
@@ -30,14 +32,20 @@ public class Simulation {
             } else {
                 int N = 0;
                 double r = 0;
-                    Scanner scanner = new Scanner(System.in);
-                    System.out.print("N: "); N = scanner.nextInt();
-                    System.out.print("L: "); L = scanner.nextDouble();
-                    System.out.print("r_c: "); rc = scanner.nextDouble();
-                    System.out.print("r: "); r = scanner.nextDouble();
-                    System.out.print("M: "); M = scanner.nextInt();
-                    System.out.print("periodic (1=si, 0=no): "); periodic = scanner.nextInt() == 1;
-                    scanner.close();
+                Scanner scanner = new Scanner(System.in);
+                System.out.print("N: ");
+                N = scanner.nextInt();
+                System.out.print("L: ");
+                L = scanner.nextDouble();
+                System.out.print("r_c: ");
+                rc = scanner.nextDouble();
+                System.out.print("r: ");
+                r = scanner.nextDouble();
+                System.out.print("M: ");
+                M = scanner.nextInt();
+                System.out.print("periodic (1=si, 0=no): ");
+                periodic = scanner.nextInt() == 1;
+                scanner.close();
 
                 particles = generateParticles(N, L, r);
                 saveMapFiles(N, L, particles, baseFilename);
@@ -45,36 +53,41 @@ public class Simulation {
 
             double maxR = 0;
             for (Particle p : particles) {
-                if (p.getRadius() > maxR) maxR = p.getRadius();
+                if (p.getRadius() > maxR)
+                    maxR = p.getRadius();
             }
 
             if (M <= 0) {
                 throw new IllegalArgumentException("M debe ser mayor a 0.");
             }
-            
+
             if (L / M <= rc + 2 * maxR) {
                 int maxM = (int) (L / (rc + 2 * maxR));
-                throw new IllegalArgumentException("La condicion L/M > rc + 2r (o equivalentemente M < L / (rc + 2r)) no se cumple. Para los parametros dados, el valor de M debe ser a lo sumo " + maxM + ".");
+                throw new IllegalArgumentException(
+                        "La condicion L/M > rc + 2r (o equivalentemente M < L / (rc + 2r)) no se cumple. Para los parametros dados, el valor de M debe ser a lo sumo "
+                                + maxM + ".");
             }
 
-            long startTime = System.nanoTime();
-            Map<Integer, Set<Integer>> neighbors;
-
+            long startTimeCim = System.nanoTime();
+            Map<Integer, Set<Integer>> neighborsCim;
 
             CellIndexMethod cim = new CellIndexMethod(L, M, rc, periodic);
             cim.populateGrid(particles);
-            neighbors = cim.calculateNeighbors();
+            neighborsCim = cim.calculateNeighbors();
 
+            long endTimeCim = System.nanoTime();
+            double timeMsCim = (endTimeCim - startTimeCim) / 1000000.0;
 
-            long endTime = System.nanoTime();
-            double timeMs = (endTime - startTime) / 1000000.0;
+            Map<Integer, Set<Integer>> neighborsBf;
 
+            BruteForce bf = new BruteForce(L, rc, periodic);
+            neighborsBf = bf.calculateNeighbors(particles);
 
-            System.out.println("Tiempo de ejecucion: " + timeMs + " ms");
+            System.out.println("Tiempo de ejecucion CIM: " + timeMsCim + " ms");
             System.out.println("Archivos generados con timestamp: " + baseFilename);
 
-
-            saveOutputs(rc, neighbors, baseFilename,periodic);
+            saveOutputs(rc, neighborsCim, baseFilename, periodic, "");
+            saveOutputs(rc, neighborsBf, baseFilename, periodic, "-bruteforce");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -109,7 +122,8 @@ public class Simulation {
         return particles;
     }
 
-    private static List<Particle> loadParticles(String staticPath, String dynamicPath, double[] L_out) throws Exception {
+    private static List<Particle> loadParticles(String staticPath, String dynamicPath, double[] L_out)
+            throws Exception {
         List<Particle> particles = new ArrayList<>();
         Scanner staticScanner = new Scanner(new File(staticPath)).useLocale(java.util.Locale.US);
         Scanner dynamicScanner = new Scanner(new File(dynamicPath)).useLocale(java.util.Locale.US);
@@ -168,6 +182,7 @@ public class Simulation {
         dynamicScanner.close();
         return particles;
     }
+
     private static void saveMapFiles(int N, double L, List<Particle> particles, String baseFilename) {
         new File("data").mkdirs();
         try {
@@ -190,10 +205,13 @@ public class Simulation {
         }
     }
 
-    private static void saveOutputs(double rc, Map<Integer, Set<Integer>> neighbors, String baseFilename,boolean periodic) {
+    private static void saveOutputs(double rc, Map<Integer, Set<Integer>> neighbors, String baseFilename,
+            boolean periodic, String suffix) {
         try {
             String periodicSuffix = periodic ? "-periodic" : "";
-            PrintWriter outWriter = new PrintWriter(new FileWriter("data/" + baseFilename + "-rc-" + rc + periodicSuffix + "-output.txt"));            for (Map.Entry<Integer, Set<Integer>> entry : neighbors.entrySet()) {
+            PrintWriter outWriter = new PrintWriter(
+                    new FileWriter("data/" + baseFilename + "-rc-" + rc + periodicSuffix + suffix + "-output.txt"));
+            for (Map.Entry<Integer, Set<Integer>> entry : neighbors.entrySet()) {
                 outWriter.print("[" + entry.getKey());
                 List<Integer> sortedNeighbors = new ArrayList<>(entry.getValue());
                 sortedNeighbors.sort(Integer::compareTo);
